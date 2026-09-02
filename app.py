@@ -569,7 +569,7 @@ def user_status(user_id):
         notification_mode=session.get('notification_pref', 'inapp')
     )
 
-
+init_db()
 if __name__ == '__main__':
-    init_db()
+    
     app.run(debug=True)
