@@ -1,0 +1,4 @@
+Flask>=3.0,<4.0
+opencv-python>=4.10
+twilio>=9.0
+python-dotenv>=1.0

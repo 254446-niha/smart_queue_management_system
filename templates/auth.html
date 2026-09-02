@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}SmartQueue · Login & Registration{% endblock %}
+{% block content %}
+<div class="auth-layout">
+  <section class="auth-intro">
+    <div class="eyebrow">ONE SIMPLE ENTRY POINT</div>
+    <h1>Welcome to<br><span>SmartQueue.</span></h1>
+    <p>One page for customers and administrators. Get a token, track your place and receive an SMS when it is your turn.</p>
+    <div class="auth-points">
+      <div>🎟️ <span>Digital token management</span></div>
+      <div>🧠 <span>Priority queue using DSA</span></div>
+      <div>📱 <span>Real SMS queue alerts</span></div>
+      <div>📷 <span>Smart crowd monitoring</span></div>
+    </div>
+  </section>
+
+  <section class="auth-card">
+    <div class="auth-tabs">
+      <button type="button" class="tab active" data-target="login">Login</button>
+      <button type="button" class="tab" data-target="register">Create account</button>
+    </div>
+
+    <form id="login" class="auth-form active" method="post">
+      <input type="hidden" name="action" value="login">
+      <label>Email<input type="email" name="email" placeholder="you@example.com" required></label>
+      <label>Password<input type="password" name="password" placeholder="••••••••" required></label>
+      <button class="primary-btn full">Login →</button>
+      <p class="hint">Demo admin: <b>admin@queue.com</b> / <b>admin123</b></p>
+    </form>
+
+    <form id="register" class="auth-form" method="post">
+      <input type="hidden" name="action" value="register">
+      <label>Full name<input name="name" placeholder="Your name" required></label>
+
+      <label>Account type
+        <select name="role" id="roleSelect">
+          <option value="user">Customer / User</option>
+          <option value="admin">Administrator</option>
+        </select>
+      </label>
+
+      <div id="userFields">
+        <label>Mobile number
+          <input type="tel" name="phone" id="phone" placeholder="9876543210" inputmode="numeric">
+          <small class="field-hint">Required for customer accounts. We'll use it for queue SMS alerts.</small>
+        </label>
+
+        <label>Notification preference
+          <select name="notification_pref" id="notificationPref">
+            <option value="inapp">In-app only</option>
+            <option value="sms">SMS notification</option>
+          </select>
+        </label>
+
+        <label class="check-row" id="smsConsentWrap">
+          <input type="checkbox" name="sms_consent" value="yes">
+          <span>I agree to receive automated queue SMS notifications on this number.</span>
+        </label>
+      </div>
+
+      <label>Email<input type="email" name="email" placeholder="you@example.com" required></label>
+      <label>Password<input type="password" name="password" placeholder="Create a password" required></label>
+
+      <label id="adminCodeWrap" class="hidden">Admin access code
+        <input name="admin_code" placeholder="Enter admin code">
+      </label>
+
+      <button class="primary-btn full">Create account →</button>
+      <p class="hint">Indian mobile numbers are accepted as 10 digits. SMS delivery requires Twilio configuration in your local .env file.</p>
+    </form>
+  </section>
+</div>
+
+<script>
+const tabs = document.querySelectorAll('.tab');
+const forms = document.querySelectorAll('.auth-form');
+const role = document.getElementById('roleSelect');
+const userFields = document.getElementById('userFields');
+const code = document.getElementById('adminCodeWrap');
+const phone = document.getElementById('phone');
+const pref = document.getElementById('notificationPref');
+const consent = document.getElementById('smsConsentWrap');
+
+function updateRole() {
+  const isAdmin = role.value === 'admin';
+  userFields.classList.toggle('hidden', isAdmin);
+  code.classList.toggle('hidden', !isAdmin);
+  phone.required = !isAdmin;
+}
+function updateSmsConsent() {
+  consent.classList.toggle('hidden', pref.value !== 'sms');
+}
+tabs.forEach(t => t.onclick = () => {
+  tabs.forEach(x => x.classList.remove('active'));
+  forms.forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById(t.dataset.target).classList.add('active');
+});
+role.onchange = updateRole;
+pref.onchange = updateSmsConsent;
+updateRole();
+updateSmsConsent();
+</script>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}SmartQueue · My Queue{% endblock %}
+{% block content %}
+<div class="dashboard-head">
+  <div><div class="eyebrow">CUSTOMER PORTAL</div><h1>Hello, {{ session.get('name') }} 👋</h1><p>Get a digital token and follow your place in the queue without waiting at the counter.</p></div>
+  <div class="live-pill"><i></i> Live updates <span id="updated">just now</span></div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card"><span>People waiting</span><strong id="waitingCount">{{ waiting_count }}</strong><small>Across all counters</small></div>
+  <div class="stat-card"><span>Open counters</span><strong id="counterCount">{{ active_counters }}</strong><small>Currently serving customers</small></div>
+  <div class="stat-card accent"><span>Average service</span><strong>~4 min</strong><small>Updates from service history</small></div>
+</div>
+
+<section class="panel token-create">
+  <div><div class="section-label">GET YOUR TOKEN</div><h2>Join the queue</h2><p>Choose a service and priority. Please use Emergency only for genuine urgent cases.</p></div>
+  <form method="post" action="{{ url_for('create_token') }}" class="token-form">
+    <select name="service"><option>General</option><option>Billing</option><option>Support</option><option>Registration</option></select>
+    <select name="priority_name"><option>Normal</option><option>Priority</option><option>Emergency</option></select>
+    <button class="primary-btn">Generate Token</button>
+  </form>
+</section>
+
+<section class="section-title"><div><div class="section-label">MY QUEUE</div><h2>Your tokens</h2></div></section>
+<div class="token-grid" id="tokenGrid">
+{% for t in tokens %}
+<article class="token-card {% if t.status=='waiting' %}is-waiting{% elif t.status=='serving' %}is-serving{% else %}is-done{% endif %}" data-token-id="{{ t.id }}">
+  <div class="token-top"><span>{{ t.service }}</span><span class="status-badge {{ t.status }}">{{ t.status|title }}</span></div>
+  <div class="token-number">{{ t.token }}</div>
+  <div class="token-meta">
+    <div><small>Priority</small><b>{{ t.priority_name }}</b></div>
+    <div><small>Position</small><b class="position">{{ t.ahead+1 if t.status=='waiting' else ('NOW' if t.status=='serving' else '—') }}</b></div>
+    <div><small>Est. wait</small><b class="wait">{{ t.wait if t.status=='waiting' else 0 }} min</b></div>
+  </div>
+  {% if t.status=='waiting' %}
+    <div class="progress"><span style="width:{{ [100-(t.ahead*12),15]|max }}%"></span></div>
+    <div class="token-footer"><span>You are <b>#{{ t.ahead+1 }}</b> in line</span><form method="post" action="{{ url_for('cancel_token',token_id=t.id) }}"><button class="link-btn">Cancel</button></form></div>
+  {% elif t.status=='serving' %}
+    <div class="called-message">🔔 <b>It's your turn!</b> Please proceed to the counter.</div>
+  {% else %}
+    <div class="token-footer"><span>This token is {{ t.status }}.</span></div>
+  {% endif %}
+</article>
+{% else %}
+<div class="empty-state"><div>🎟️</div><h3>No tokens yet</h3><p>Generate your first digital token above.</p></div>
+{% endfor %}
+</div>
+
+<section class="panel notification-panel">
+  <div class="section-label">SMS ALERTS</div><h2>Stay updated on your mobile</h2>
+  <p>Registered mobile: <b>{{ session.get('phone') or 'Not set' }}</b></p>
+  {% if session.get('notification_pref') == 'sms' %}
+    {% if sms_ready %}<div class="notification-choice"><span class="notify-chip">📱 SMS enabled</span><span class="muted">You will receive an SMS when your token is close and when it is called.</span></div>
+    {% else %}<div class="notification-choice warning-choice"><span class="notify-chip">📱 SMS selected</span><span class="muted">SMS is not configured yet. An administrator must add the Twilio settings in .env.</span></div>{% endif %}
+  {% else %}
+    <div class="notification-choice"><span class="notify-chip">🔔 In-app</span><span class="muted">Enable SMS during registration to receive alerts on your mobile.</span></div>
+  {% endif %}
+</section>
+
+<section class="panel current-panel">
+  <div class="section-label">LIVE QUEUE</div><h2>Now being served</h2>
+  <div id="currentServing" class="current-list">
+    {% if current %}<div class="current-row"><strong>{{ current.token }}</strong><span>{{ current.service }}</span><b>{{ current.counter_name or 'Counter' }}</b></div>
+    {% else %}<p class="muted">No customer is currently being served.</p>{% endif %}
+  </div>
+</section>
+
+<script>
+async function refreshUser(){
+  try{
+    const r=await fetch('{{ url_for("user_status",user_id=session.get("user_id")) }}');
+    const d=await r.json();
+    document.getElementById('waitingCount').textContent=d.waiting_count;
+    document.getElementById('counterCount').textContent=d.active_counters;
+    document.getElementById('updated').textContent=d.updated_at;
+    d.tokens.forEach(t=>{
+      const c=document.querySelector(`[data-token-id="${t.id}"]`);
+      if(c){
+        const p=c.querySelector('.position'),w=c.querySelector('.wait'),s=c.querySelector('.status-badge');
+        if(p)p.textContent=t.status==='serving'?'NOW':(t.status==='waiting'?('#'+t.position):'—');
+        if(w)w.textContent=t.status==='serving'?'Your turn':(t.wait+' min');
+        if(s){s.textContent=t.status.charAt(0).toUpperCase()+t.status.slice(1);s.className='status-badge '+t.status;}
+      }
+    });
+    document.getElementById('currentServing').innerHTML=d.current
+      ? `<div class="current-row"><strong>${d.current.token}</strong><span>${d.current.service}</span><b>${d.current.counter_name||'Counter'}</b></div>`
+      : '<p class="muted">No customer is currently being served.</p>';
+  }catch(e){ console.log('Live update unavailable'); }
+}
+setInterval(refreshUser,5000);
+</script>
+{% endblock %}
